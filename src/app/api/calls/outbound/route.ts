@@ -3,18 +3,39 @@ import twilio from "twilio";
 import { prisma } from "@/lib/prisma";
 import type { OutboundCallRequest } from "@/types";
 
-const accountSid = process.env.TWILIO_ACCOUNT_SID!;
-const authToken = process.env.TWILIO_AUTH_TOKEN!;
-const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER!;
-const publicUrl = process.env.NEXT_PUBLIC_APP_URL!;
-const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "wss://localhost:3001";
+function getTwilioClient() {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
 
-const client = twilio(accountSid, authToken);
+  if (!accountSid || !authToken) {
+    throw new Error(`Missing Twilio credentials. SID: ${accountSid ? 'set' : 'missing'}, Token: ${authToken ? 'set' : 'missing'}`);
+  }
+
+  return twilio(accountSid, authToken);
+}
 
 export async function POST(req: NextRequest) {
   try {
     const body: OutboundCallRequest = await req.json();
     const { phoneNumber, config, recordCall } = body;
+
+    const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
+    const publicUrl = process.env.NEXT_PUBLIC_APP_URL;
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "wss://localhost:3001";
+
+    if (!twilioPhoneNumber) {
+      return NextResponse.json(
+        { success: false, error: "TWILIO_PHONE_NUMBER not configured" },
+        { status: 500 }
+      );
+    }
+
+    if (!publicUrl) {
+      return NextResponse.json(
+        { success: false, error: "NEXT_PUBLIC_APP_URL not configured" },
+        { status: 500 }
+      );
+    }
 
     if (!phoneNumber || phoneNumber.replace(/\D/g, "").length < 10) {
       return NextResponse.json(
@@ -47,6 +68,9 @@ export async function POST(req: NextRequest) {
     </Stream>
   </Connect>
 </Response>`;
+
+    // Get Twilio client
+    const client = getTwilioClient();
 
     // Initiate the call
     const twilioCall = await client.calls.create({
