@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Call {
+  id                 String       @id @default(uuid())
+  createdAt          DateTime     @default(now()) @map("created_at")
+  endedAt            DateTime?    @map("ended_at")
+  phoneNumber        String       @map("phone_number")
+  direction          CallDirection
+  status             CallStatus   @default(initiated)
+  durationSeconds    Int?         @map("duration_seconds")
+  twilioCallSid      String?      @unique @map("twilio_call_sid")
+  recordingUrl       String?      @map("recording_url")
+  recordingDuration  Int?         @map("recording_duration")
+  configSnapshot     Json?        @map("config_snapshot")
+  totalInputTokens   Int          @default(0) @map("total_input_tokens")
+  totalOutputTokens  Int          @default(0) @map("total_output_tokens")
+  estimatedCost      Decimal      @default(0) @db.Decimal(10, 4) @map("estimated_cost")
+  events             CallEvent[]
+
+  @@index([createdAt(sort: Desc)])
+  @@index([status])
+  @@map("calls")
+}
+
+model CallEvent {
+  id        String         @id @default(uuid())
+  callId    String         @map("call_id")
+  createdAt DateTime       @default(now()) @map("created_at")
+  source    EventSource
+  eventType String         @map("event_type")
+  direction EventDirection
+  payload   Json?
+
+  call      Call           @relation(fields: [callId], references: [id], onDelete: Cascade)
+
+  @@index([callId])
+  @@index([createdAt])
+  @@map("call_events")
+}
+
+model Prompt {
+  id           String    @id @default(uuid())
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  name         String
+  description  String?
+  instructions String
+  isDefault    Boolean   @default(false) @map("is_default")
+  tags         String[]  @default([])
+
+  @@index([isDefault])
+  @@map("prompts")
+}
+
+enum CallDirection {
+  inbound
+  outbound
+}
+
+enum CallStatus {
+  initiated
+  ringing
+  in_progress  @map("in-progress")
+  completed
+  failed
+  busy
+  no_answer    @map("no-answer")
+}
+
+enum EventSource {
+  twilio
+  openai
+  system
+}
+
+enum EventDirection {
+  incoming
+  outgoing
+}

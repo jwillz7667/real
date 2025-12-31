@@ -1,0 +1,30 @@
+# WebSocket server Dockerfile for Railway
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY prisma ./prisma/
+
+# Install dependencies
+RUN npm ci --omit=dev
+RUN npm install -D tsx typescript @types/node @types/ws
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Copy source files
+COPY src/server ./src/server
+COPY src/types ./src/types
+COPY tsconfig.json ./
+
+# Build WebSocket server
+RUN npx tsc src/server/websocket-server.ts --outDir dist --esModuleInterop --module commonjs --target es2020 --skipLibCheck
+
+EXPOSE 3001
+
+ENV PORT=3001
+ENV WEBSOCKET_PORT=3001
+
+CMD ["node", "dist/websocket-server.js"]
