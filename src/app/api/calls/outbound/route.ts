@@ -58,11 +58,14 @@ export async function POST(req: NextRequest) {
     const configParam = encodeURIComponent(JSON.stringify(config));
     const streamUrl = `${wsUrl.replace("https://", "wss://").replace("http://", "ws://")}/media-stream?callId=${call.id}&config=${configParam}&record=${recordCall}`;
 
+    // Escape for XML (& must be &amp; in XML attributes)
+    const xmlSafeUrl = streamUrl.replace(/&/g, "&amp;");
+
     // Create TwiML for the call
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Connect>
-    <Stream url="${streamUrl}">
+    <Stream url="${xmlSafeUrl}">
       <Parameter name="callId" value="${call.id}" />
       <Parameter name="direction" value="outbound" />
     </Stream>

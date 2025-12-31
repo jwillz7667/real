@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import type { CallStatus } from "@/types";
+import { CallStatus } from "@prisma/client";
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,19 +15,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing CallSid" }, { status: 400 });
     }
 
-    // Map Twilio status to our status
+    // Map Twilio status to Prisma enum (uses underscores, not hyphens)
     const statusMap: Record<string, CallStatus> = {
-      initiated: "initiated",
-      ringing: "ringing",
-      "in-progress": "in-progress",
-      completed: "completed",
-      busy: "busy",
-      "no-answer": "no-answer",
-      failed: "failed",
-      canceled: "failed",
+      initiated: CallStatus.initiated,
+      ringing: CallStatus.ringing,
+      "in-progress": CallStatus.in_progress,
+      completed: CallStatus.completed,
+      busy: CallStatus.busy,
+      "no-answer": CallStatus.no_answer,
+      failed: CallStatus.failed,
+      canceled: CallStatus.failed,
     };
 
-    const mappedStatus = statusMap[callStatus] || "failed";
+    const mappedStatus = statusMap[callStatus] || CallStatus.failed;
 
     // Find and update call
     const call = await prisma.call.findFirst({
